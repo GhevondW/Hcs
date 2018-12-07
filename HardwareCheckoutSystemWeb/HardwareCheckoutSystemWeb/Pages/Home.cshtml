@@ -1,0 +1,214 @@
+﻿@page
+@using HardwareCheckoutSystemWeb.Models;
+@model HardwareCheckoutSystemWeb.Pages.HomeModel
+@{
+    ViewData["Title"] = "Home";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+@Html.AntiForgeryToken()
+<div class="container-fluid">
+    <div class="row">
+
+        <div class="col-sm-8 col-md-8 col-lg-8 col-xl-8 bg-success" style="background-color:azure">
+            <div class="table-responsive">
+                @if (Model.Devices.Count != 0)
+                {
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Brand</th>
+                                <th>Model</th>
+                                <th>Description</th>
+                                <th>Max per day</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var device in Model.Devices)
+                            {
+                                <tr>
+                                    <td class="col-md-1">@device.Category.Name</td>
+                                    <td class="col-md-2">@device.Brand.Name</td>
+                                    <td class="col-md-2">@device.Model</td>
+                                    <td class="col-md-5">@device.Description</td>
+                                    <td class="col-md-2">@device.MaxPeriod</td>
+                                    <td class="col-md-2">@device.Status</td>
+                                    <td class="col-md-2">
+                                        <button type="button" class="btn btn-primary btnSend" data-toggle="modal" data-target="#SendRequestModal"
+                                                id="@device.Id">
+                                            Send Request
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <h3>There are not devices</h3>
+                }
+            </div>
+        </div>
+        <div class="col-sm-4 col-md-4 col-lg-4 col-xl-4 bg-warning" style="background-color:azure">
+            <div class="container-fluid">
+                <h2>Request statuses</h2>
+                <div class="panel-group" id="accordion">
+                    @*<div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a data-toggle="collapse" data-parent="#accordion" href="#collapse1">Request 1</a>
+                            </h4>
+                        </div>
+                        <div id="collapse1" class="panel-collapse collapse in">
+                            <div class="panel-body">
+                                Request info
+                            </div>
+                        </div>
+                    </div>*@
+                    @foreach (var req in Model.Requests)
+                    {
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a data-toggle="collapse" data-parent="#accordion" href="#@req.Id">Request ID=@req.Id.ToString().Split("-")[0]</a>
+                            </h4>
+                        </div>
+                        <div id="@req.Id" class="panel-collapse collapse in">
+                            <div class="panel-body">
+                                <p>@req.Message</p>
+                                <p>@req.RentStartDate</p>
+                                <p>@req.RentEndDate</p>
+                                <p>@req.RequestDate</p>
+                                <p>@req.Device.Model</p>
+                                <p>@req.Device.Brand.Name</p>
+                                <p>@req.Device.Description</p>
+                            </div>
+                        </div>
+                    </div>
+                    }
+                </div>
+                <button type="button" class="btn btn-primary btn-md pull-right">Open</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- The Modal -->
+<div class="modal fade" id="SendRequestModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h4 class="modal-title">Send Request Dialog</h4>
+                <button type="button" class="close" data-dismiss="modal">X</button>
+            </div>
+
+            <!-- Modal body -->
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Message</label>
+                    <input type="text" class="form-control" id="messageInput" />
+                </div>
+                <div class="form-group">
+                    <label>Rent Start Date</label>
+                    <input type="date" class="form-control" id="rentStartDate" />
+                </div>
+                <div class="form-group">
+                    <label>Rent End Date</label>
+                    <input type="date" class="form-control" id="rentEndDate" />
+                </div>
+            </div>
+
+            <!-- Modal footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal" id="buttonSendModel">Send</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var deviceId;
+    var userId;
+    var status = 1;
+    var requestDate;
+    var rentStartDate;
+    var rentEndDate;
+    var message;
+    $(document).ready(function () {
+        $(".btnSend").click(function () {
+            deviceId = $(this).attr("id").toString();
+            console.log(deviceId);
+        });
+
+        $("#buttonSendModel").click(function () {
+
+            requestDate = new Date();
+
+            rentStartDate = $("#rentStartDate").val();
+            rentEndDate = $("#rentEndDate").val();
+            message = $("#messageInput").val();
+
+            var request = {
+                DeviceId: deviceId,
+                UserId: userId,
+                Status: status,
+                RequestDate: requestDate,
+                RentStartDate: rentStartDate,
+                RentEndDate: rentEndDate,
+                Message: message
+            };
+
+            console.log(JSON.stringify(request));
+
+
+            $.ajax({
+                url: '/Home',
+                type: 'POST',
+                headers: {
+                    RequestVerificationToken:
+                        $('input:hidden[name="__RequestVerificationToken"]').val()
+                },
+                contentType: 'application/json; charset=utf-8',
+                data: JSON.stringify(request)
+            }).done(function (result) {
+                console.log(result.toString());
+                updateDevicesList();
+            });
+
+            
+
+        });
+
+        $.ajax({
+            type: "GET",
+            url: "Home?handler=UserId",
+            contentType: "application/json",
+            dataType: "json",
+            success: function (response) {
+                userId = response.toString();
+            },
+            failure: function (response) {
+                alert(response);
+            }
+        });
+
+        function updateDevicesList() {
+            //todo
+        }
+
+        function Device() {
+            //todo
+        }
+
+    });
+</script>
+
+
+
+
